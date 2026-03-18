@@ -1,16 +1,18 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+
 import { getRuns } from "../../api/runs";
 import { PageHeader } from "../../components/common/PageHeader";
-import { MetricCard } from "../../components/common/MetricCard";
-import { SectionCard } from "../../components/common/SectionCard";
-import { StatusBadge } from "../../components/common/StatusBadge";
 import { LoadingState } from "../../components/common/LoadingState";
 import { ErrorState } from "../../components/common/ErrorState";
-import { formatDateTime } from "../../lib/format";
-import { Link } from "react-router-dom";
+import { SectionCard } from "../../components/common/SectionCard";
+
 import { RunTriggerForm } from "./RunTriggerForm";
 import { RunsPassFailChart } from "./RunsPassFailChart";
+import { RunStatusDistributionChart } from "./RunStatusDistributionChart";
+import { DashboardMetricsRow } from "./DashboardMetricsRow";
+import { ActiveRunsPanel } from "./ActiveRunsPanel";
+import { RecentRunsTable } from "./RecentRunsTable";
 
 export function DashboardPage() {
   const { data, isLoading, isError, error, refetch } = useQuery({
@@ -21,39 +23,56 @@ export function DashboardPage() {
 
   const runs = data?.runs ?? [];
 
-  const metrics = useMemo(() => {
-    const totalRuns = runs.length;
-    const activeRuns = runs.filter(
+  const sortedRuns = useMemo(() => {
+    return [...runs].sort(
+      (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+    );
+  }, [runs]);
+
+  const activeRuns = useMemo(() => {
+    return sortedRuns.filter(
       (run) => run.status === "queued" || run.status === "running",
-    ).length;
-    const failedRuns = runs.filter((run) => run.status === "failed").length;
-    const completedRuns = runs.filter(
+    );
+  }, [sortedRuns]);
+
+  const recentRuns = useMemo(() => {
+    return sortedRuns.slice(0, 8);
+  }, [sortedRuns]);
+
+  const metrics = useMemo(() => {
+    const totalRuns = sortedRuns.length;
+    const activeRunsCount = activeRuns.length;
+    const failedRuns = sortedRuns.filter((run) => run.status === "failed").length;
+    const completedRuns = sortedRuns.filter(
       (run) => run.status === "completed",
     ).length;
 
-    const totalTests = runs.reduce(
+    const totalTests = sortedRuns.reduce(
       (sum, run) => sum + (run.execution_summary?.total ?? 0),
       0,
     );
-    const passedTests = runs.reduce(
+
+    const passedTests = sortedRuns.reduce(
       (sum, run) => sum + (run.execution_summary?.passed ?? 0),
       0,
     );
+
     const passRate =
       totalTests > 0 ? ((passedTests / totalTests) * 100).toFixed(1) : "0.0";
 
     return {
       totalRuns,
-      activeRuns,
+      activeRunsCount,
       failedRuns,
       completedRuns,
       passRate,
     };
-  }, [runs]);
+  }, [sortedRuns, activeRuns]);
 
   if (isLoading) return <LoadingState label="Loading dashboard..." />;
-  if (isError)
+  if (isError) {
     return <ErrorState message={(error as Error).message} onRetry={refetch} />;
+  }
 
   return (
     <div>
@@ -66,144 +85,41 @@ export function DashboardPage() {
         <RunTriggerForm />
       </div>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(5, 1fr)",
-          gap: "16px",
-          marginBottom: "20px",
-        }}
-      >
-        <MetricCard label="Total Runs" value={metrics.totalRuns} />
-        <MetricCard label="Active Runs" value={metrics.activeRuns} />
-        <MetricCard label="Failed Runs" value={metrics.failedRuns} />
-        <MetricCard label="Completed Runs" value={metrics.completedRuns} />
-        <MetricCard label="Pass Rate" value={`${metrics.passRate}%`} />
-      </div>
+      <DashboardMetricsRow
+        totalRuns={metrics.totalRuns}
+        activeRunsCount={metrics.activeRunsCount}
+        failedRuns={metrics.failedRuns}
+        completedRuns={metrics.completedRuns}
+        passRate={metrics.passRate}
+      />
 
-      <div
-        style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}
-      >
-        <div style={{ display: "grid", gap: "16px" }}>
+      <div style={{ display: "grid", gap: "16px" }}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "2fr 1fr",
+            gap: "16px",
+          }}
+        >
           <SectionCard title="Pass / Fail Trend (Latest 10 Runs)">
-            <RunsPassFailChart runs={runs} />
+            <RunsPassFailChart runs={sortedRuns} />
           </SectionCard>
 
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: "16px",
-            }}
-          >
-            <SectionCard title="Active Runs">
-              {runs.filter(
-                (run) => run.status === "queued" || run.status === "running",
-              ).length === 0 ? (
-                <div>No active runs</div>
-              ) : (
-                <div style={{ display: "grid", gap: "12px" }}>
-                  {runs
-                    .filter(
-                      (run) =>
-                        run.status === "queued" || run.status === "running",
-                    )
-                    .map((run) => (
-                      <div
-                        key={run.run_id}
-                        style={{
-                          border: "1px solid #e2e8f0",
-                          borderRadius: "8px",
-                          padding: "12px",
-                        }}
-                      >
-                        <div
-                          style={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            marginBottom: "8px",
-                          }}
-                        >
-                          <Link to={`/runs/${run.run_id}`}>{run.run_id}</Link>
-                          <StatusBadge status={run.status} />
-                        </div>
-                        <div style={{ color: "#64748b", fontSize: "14px" }}>
-                          {formatDateTime(run.timestamp)}
-                        </div>
-                      </div>
-                    ))}
-                </div>
-              )}
-            </SectionCard>
-
-            <SectionCard title="Recent Runs">
-              <div style={{ overflowX: "auto" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                  <thead>
-                    <tr>
-                      <th align="left">Run ID</th>
-                      <th align="left">Status</th>
-                      <th align="left">Passed</th>
-                      <th align="left">Failed</th>
-                      <th align="left">Time</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {runs.slice(0, 8).map((run) => (
-                      <tr
-                        key={run.run_id}
-                        style={{ borderTop: "1px solid #e2e8f0" }}
-                      >
-                        <td style={{ padding: "10px 0" }}>
-                          <Link to={`/runs/${run.run_id}`}>{run.run_id}</Link>
-                        </td>
-                        <td>
-                          <StatusBadge status={run.status} />
-                        </td>
-                        <td>{run.execution_summary?.passed ?? 0}</td>
-                        <td>{run.execution_summary?.failed ?? 0}</td>
-                        <td>{formatDateTime(run.timestamp)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </SectionCard>
-          </div>
+          <SectionCard title="Run Status Distribution">
+            <RunStatusDistributionChart runs={sortedRuns} />
+          </SectionCard>
         </div>
-        <SectionCard title="Recent Runs">
-          <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead>
-                <tr>
-                  <th align="left">Run ID</th>
-                  <th align="left">Status</th>
-                  <th align="left">Passed</th>
-                  <th align="left">Failed</th>
-                  <th align="left">Time</th>
-                </tr>
-              </thead>
-              <tbody>
-                {runs.slice(0, 8).map((run) => (
-                  <tr
-                    key={run.run_id}
-                    style={{ borderTop: "1px solid #e2e8f0" }}
-                  >
-                    <td style={{ padding: "10px 0" }}>
-                      <Link to={`/runs/${run.run_id}`}>{run.run_id}</Link>
-                    </td>
-                    <td>
-                      <StatusBadge status={run.status} />
-                    </td>
-                    <td>{run.execution_summary?.passed ?? 0}</td>
-                    <td>{run.execution_summary?.failed ?? 0}</td>
-                    <td>{formatDateTime(run.timestamp)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </SectionCard>
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: "16px",
+          }}
+        >
+          <ActiveRunsPanel runs={activeRuns} />
+          <RecentRunsTable runs={recentRuns} />
+        </div>
       </div>
     </div>
   );
