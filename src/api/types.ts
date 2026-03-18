@@ -55,13 +55,20 @@ export interface AiFailureExplanation {
   status?: string;
   duration_ms?: number;
   failure_type?: string;
-  what_happened?: string;
-  most_likely_causes?: string[];
-  evidence_to_check_in_artifacts?: string[];
-  recommended_next_action?: string;
+  why_it_failed?: string;
+  notes_for_qa?: string;
+  what_failed?: {
+    assertion?: string;
+    expected?: string;
+    received?: string;
+    timeout_ms?: number;
+    locator?: string;
+    source_location?: string;
+  };
   specific_fixes?: Array<{
-    fix?: string;
-    how?: string[];
+    type?: string;
+    change?: string;
+    example_patch?: Record<string, unknown>;
   }>;
 }
 
@@ -81,11 +88,17 @@ export interface FailureClusters {
   clusters?: FailureClusterItem[];
 }
 
+export interface ArtifactFileItem {
+  name?: string;
+  path?: string;
+  url?: string;
+}
+
 export interface ArtifactsPayload {
   run_dir?: string;
-  screenshots?: string[];
-  traces?: string[];
-  all_files?: string[];
+  screenshots?: ArtifactFileItem[];
+  traces?: ArtifactFileItem[];
+  all_files?: ArtifactFileItem[];
 }
 
 export interface RunDetails {

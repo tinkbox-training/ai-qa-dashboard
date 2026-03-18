@@ -1,5 +1,6 @@
 import { SectionCard } from "../../components/common/SectionCard";
 import type { ArtifactsPayload } from "../../api/types";
+import { ArtifactFileList } from "./ArtifactFileList";
 
 interface ArtifactsPanelProps {
   artifacts?: ArtifactsPayload;
@@ -22,44 +23,9 @@ export function ArtifactsPanel({ artifacts }: ArtifactsPanelProps) {
             <strong>Run Directory:</strong> {artifacts?.run_dir ?? "-"}
           </div>
 
-          <div>
-            <strong>Screenshots</strong>
-            {screenshots.length > 0 ? (
-              <ul>
-                {screenshots.map((file, index) => (
-                  <li key={`${file}-${index}`}>{file}</li>
-                ))}
-              </ul>
-            ) : (
-              <div>No screenshots</div>
-            )}
-          </div>
-
-          <div>
-            <strong>Traces</strong>
-            {traces.length > 0 ? (
-              <ul>
-                {traces.map((file, index) => (
-                  <li key={`${file}-${index}`}>{file}</li>
-                ))}
-              </ul>
-            ) : (
-              <div>No traces</div>
-            )}
-          </div>
-
-          <div>
-            <strong>All Files</strong>
-            {allFiles.length > 0 ? (
-              <ul>
-                {allFiles.map((file, index) => (
-                  <li key={`${file}-${index}`}>{file}</li>
-                ))}
-              </ul>
-            ) : (
-              <div>No files</div>
-            )}
-          </div>
+          <ArtifactFileList title="Screenshots" files={screenshots} />
+          <ArtifactFileList title="Traces" files={traces} />
+          <ArtifactFileList title="All Files" files={allFiles} />
         </div>
       )}
     </SectionCard>

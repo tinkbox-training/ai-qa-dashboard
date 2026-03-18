@@ -1,8 +1,7 @@
 import { SectionCard } from "../../components/common/SectionCard";
-import type { AiFailureExplanation } from "../../api/types";
 
 interface AiExplanationsPanelProps {
-  explanations: AiFailureExplanation[];
+  explanations: any[];
 }
 
 export function AiExplanationsPanel({
@@ -25,33 +24,27 @@ export function AiExplanationsPanel({
             >
               <div><strong>Title:</strong> {item.title ?? "-"}</div>
               <div><strong>Failure Type:</strong> {item.failure_type ?? "-"}</div>
-              <div><strong>What Happened:</strong> {item.what_happened ?? "-"}</div>
 
-              {Array.isArray(item.most_likely_causes) && item.most_likely_causes.length > 0 ? (
-                <div style={{ marginTop: "8px" }}>
-                  <strong>Most Likely Causes:</strong>
-                  <ul>
-                    {item.most_likely_causes.map((cause, causeIndex) => (
-                      <li key={causeIndex}>{cause}</li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
+              <div style={{ marginTop: "8px" }}>
+                <strong>Why It Failed:</strong> {item.why_it_failed ?? "-"}
+              </div>
 
-              {Array.isArray(item.evidence_to_check_in_artifacts) &&
-              item.evidence_to_check_in_artifacts.length > 0 ? (
+              {item.what_failed ? (
                 <div style={{ marginTop: "8px" }}>
-                  <strong>Evidence To Check:</strong>
-                  <ul>
-                    {item.evidence_to_check_in_artifacts.map((evidence, evidenceIndex) => (
-                      <li key={evidenceIndex}>{evidence}</li>
-                    ))}
-                  </ul>
+                  <strong>What Failed:</strong>
+                  <div style={{ marginTop: "6px", paddingLeft: "8px" }}>
+                    <div><strong>Assertion:</strong> {item.what_failed.assertion ?? "-"}</div>
+                    <div><strong>Expected:</strong> {item.what_failed.expected ?? "-"}</div>
+                    <div><strong>Received:</strong> {item.what_failed.received ?? "-"}</div>
+                    <div><strong>Timeout:</strong> {item.what_failed.timeout_ms ?? "-"} ms</div>
+                    <div><strong>Locator:</strong> {item.what_failed.locator ?? "-"}</div>
+                    <div><strong>Source:</strong> {item.what_failed.source_location ?? "-"}</div>
+                  </div>
                 </div>
               ) : null}
 
               {Array.isArray(item.specific_fixes) && item.specific_fixes.length > 0 ? (
-                <div style={{ marginTop: "8px" }}>
+                <div style={{ marginTop: "12px" }}>
                   <strong>Specific Fixes:</strong>
                   <div style={{ display: "grid", gap: "10px", marginTop: "8px" }}>
                     {item.specific_fixes.map((fix, fixIndex) => (
@@ -63,13 +56,26 @@ export function AiExplanationsPanel({
                           padding: "10px",
                         }}
                       >
-                        <div><strong>Fix:</strong> {fix.fix ?? "-"}</div>
-                        {Array.isArray(fix.how) && fix.how.length > 0 ? (
-                          <ul>
-                            {fix.how.map((step, stepIndex) => (
-                              <li key={stepIndex}>{step}</li>
-                            ))}
-                          </ul>
+                        <div><strong>Type:</strong> {fix.type ?? "-"}</div>
+                        <div><strong>Change:</strong> {fix.change ?? "-"}</div>
+
+                        {fix.example_patch ? (
+                          <div style={{ marginTop: "8px" }}>
+                            <strong>Example Patch:</strong>
+                            <pre
+                              style={{
+                                whiteSpace: "pre-wrap",
+                                overflowX: "auto",
+                                background: "#f8fafc",
+                                border: "1px solid #e2e8f0",
+                                borderRadius: "8px",
+                                padding: "10px",
+                                marginTop: "6px",
+                              }}
+                            >
+                              {JSON.stringify(fix.example_patch, null, 2)}
+                            </pre>
+                          </div>
                         ) : null}
                       </div>
                     ))}
@@ -77,9 +83,8 @@ export function AiExplanationsPanel({
                 </div>
               ) : null}
 
-              <div style={{ marginTop: "8px" }}>
-                <strong>Recommended Next Action:</strong>{" "}
-                {item.recommended_next_action ?? "-"}
+              <div style={{ marginTop: "12px" }}>
+                <strong>Notes for QA:</strong> {item.notes_for_qa ?? "-"}
               </div>
             </div>
           ))}
