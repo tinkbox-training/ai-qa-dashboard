@@ -33,8 +33,10 @@ type AiExplanation = {
 
 export function RunDetailsPage() {
   const { runId = "" } = useParams();
+
   const [selectedFailure, setSelectedFailure] =
     useState<ExecutionResultRow | null>(null);
+  const [selectedFailureOpen, setSelectedFailureOpen] = useState(false);
 
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["runs", runId, "details"],
@@ -159,6 +161,19 @@ export function RunDetailsPage() {
     },
   );
 
+  const totalTests = Number(
+    data.execution_summary?.total ?? data.total_tests ?? 0,
+  );
+
+  const passRateTone =
+    passRate === 0 || totalTests === 0
+      ? "default"
+      : passRate < 70
+        ? "danger"
+        : passRate <= 80
+          ? "warning"
+          : "success";
+
   return (
     <div>
       <PageHeader
@@ -203,7 +218,6 @@ export function RunDetailsPage() {
               : "default"
           }
         />
-
         <MetricCard
           label="Failed"
           value={data.execution_summary?.failed ?? data.failed_tests ?? 0}
@@ -213,13 +227,10 @@ export function RunDetailsPage() {
               : "default"
           }
         />
-
         <MetricCard
           label="Pass Rate"
           value={formattedPassRate}
-          tone={
-            passRate < 70 ? "danger" : passRate <= 80 ? "warning" : "success"
-          }
+          tone={passRateTone}
         />
       </div>
 
@@ -303,7 +314,10 @@ export function RunDetailsPage() {
 
         <ExecutionResultsTable
           results={executionResults}
-          onSelectFailure={(result) => setSelectedFailure(result)}
+          onSelectFailure={(result) => {
+            setSelectedFailure(result);
+            setSelectedFailureOpen(true);
+          }}
         />
 
         <FailedTestsPanel failedTests={failedTestDetails} />
@@ -319,10 +333,14 @@ export function RunDetailsPage() {
       </div>
 
       <FailureDetailsModal
-        open={!!selectedFailure}
-        onClose={() => setSelectedFailure(null)}
+        open={selectedFailureOpen}
+        onClose={() => {
+          setSelectedFailureOpen(false);
+          setSelectedFailure(null);
+        }}
         result={selectedFailure}
         explanation={selectedExplanation}
+        runId={runId}
       />
     </div>
   );

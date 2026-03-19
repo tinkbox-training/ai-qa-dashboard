@@ -31,6 +31,7 @@ interface FailureDetailsModalProps {
   onClose: () => void;
   result: ExecutionResultRow | null;
   explanation?: AiExplanation | null;
+  runId: string;
 }
 
 export function FailureDetailsModal({
@@ -38,6 +39,7 @@ export function FailureDetailsModal({
   onClose,
   result,
   explanation,
+  runId,
 }: FailureDetailsModalProps) {
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -121,14 +123,32 @@ export function FailureDetailsModal({
                 marginTop: "6px",
                 color: "#475569",
                 fontSize: "14px",
+                display: "flex",
+                flexWrap: "wrap",
+                gap: "8px",
               }}
             >
-              Status: <strong style={{ color: statusColor }}>{result.status ?? "-"}</strong>
-              {" • "}
-              Duration:{" "}
-              {typeof result.duration_ms === "number"
-                ? `${(result.duration_ms / 1000).toFixed(2)}s`
-                : "-"}
+              <span>
+                Status:{" "}
+                <strong style={{ color: statusColor }}>
+                  {result.status ?? "-"}
+                </strong>
+              </span>
+
+              <span>•</span>
+
+              <span>
+                Duration:{" "}
+                {typeof result.duration_ms === "number"
+                  ? `${(result.duration_ms / 1000).toFixed(2)}s`
+                  : "-"}
+              </span>
+
+              <span>•</span>
+
+              <span>
+                Run ID: <strong>{runId || "-"}</strong>
+              </span>
             </div>
           </div>
 
@@ -162,7 +182,9 @@ export function FailureDetailsModal({
                 padding: "14px",
               }}
             >
-              <div style={{ fontWeight: 700, marginBottom: "8px" }}>Full Error</div>
+              <div style={{ fontWeight: 700, marginBottom: "8px" }}>
+                Full Error
+              </div>
 
               <pre
                 style={{
@@ -194,11 +216,14 @@ export function FailureDetailsModal({
               </div>
 
               {!explanation ? (
-                <div style={{ color: "#64748b" }}>No AI explanation available</div>
+                <div style={{ color: "#64748b" }}>
+                  No AI explanation available
+                </div>
               ) : (
                 <div style={{ display: "grid", gap: "12px" }}>
                   <div>
-                    <strong>Failure Type:</strong> {explanation.failure_type ?? "-"}
+                    <strong>Failure Type:</strong>{" "}
+                    {explanation.failure_type ?? "-"}
                   </div>
 
                   <div>
@@ -224,22 +249,28 @@ export function FailureDetailsModal({
                         }}
                       >
                         <div>
-                          <strong>Assertion:</strong> {explanation.what_failed.assertion ?? "-"}
+                          <strong>Assertion:</strong>{" "}
+                          {explanation.what_failed.assertion ?? "-"}
                         </div>
                         <div>
-                          <strong>Expected:</strong> {explanation.what_failed.expected ?? "-"}
+                          <strong>Expected:</strong>{" "}
+                          {explanation.what_failed.expected ?? "-"}
                         </div>
                         <div>
-                          <strong>Received:</strong> {explanation.what_failed.received ?? "-"}
+                          <strong>Received:</strong>{" "}
+                          {explanation.what_failed.received ?? "-"}
                         </div>
                         <div>
-                          <strong>Timeout:</strong> {explanation.what_failed.timeout_ms ?? "-"} ms
+                          <strong>Timeout:</strong>{" "}
+                          {explanation.what_failed.timeout_ms ?? "-"} ms
                         </div>
                         <div>
-                          <strong>Locator:</strong> {explanation.what_failed.locator ?? "-"}
+                          <strong>Locator:</strong>{" "}
+                          {explanation.what_failed.locator ?? "-"}
                         </div>
                         <div>
-                          <strong>Source:</strong> {explanation.what_failed.source_location ?? "-"}
+                          <strong>Source:</strong>{" "}
+                          {explanation.what_failed.source_location ?? "-"}
                         </div>
                       </div>
                     </div>
@@ -297,7 +328,8 @@ export function FailureDetailsModal({
                   ) : null}
 
                   <div>
-                    <strong>Notes for QA:</strong> {explanation.notes_for_qa ?? "-"}
+                    <strong>Notes for QA:</strong>{" "}
+                    {explanation.notes_for_qa ?? "-"}
                   </div>
                 </div>
               )}
@@ -346,7 +378,9 @@ export function FailureDetailsModal({
                 padding: "14px",
               }}
             >
-              <div style={{ fontWeight: 700, marginBottom: "10px" }}>Artifacts</div>
+              <div style={{ fontWeight: 700, marginBottom: "10px" }}>
+                Artifacts
+              </div>
 
               <div style={{ display: "grid", gap: "8px" }}>
                 {traceUrl ? (
