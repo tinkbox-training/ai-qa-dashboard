@@ -14,6 +14,7 @@ import { ErrorState } from "../../components/common/ErrorState";
 
 import { RunStatusBanner } from "../../components/run/RunStatusBanner";
 import { RunTimeline } from "../../components/run/RunTimeline";
+import { PatchComparisonPanel } from "../../components/run/PatchComparisonPanel";
 
 import { RunLifecycleCard } from "./RunLifecycleCard";
 import { FailedTestsPanel } from "./FailedTestsPanel";
@@ -25,6 +26,12 @@ import {
   type ExecutionResultRow,
 } from "./ExecutionResultsTable";
 import { FailureDetailsModal } from "./FailureDetailsModal";
+
+import {
+  compareRuns,
+  getPatchComparison,
+  patchComparisonKey,
+} from "../../api/patches";
 
 type AiExplanation = {
   title?: string;
@@ -64,6 +71,40 @@ export function RunDetailsPage() {
       null
     );
   }, [selectedFailure, aiExplanations]);
+
+  const patchId = data?.patch_id ?? data?.patch?.patch_id ?? null;
+  const originalRunId =
+    data?.original_run_id ??
+    data?.patch?.original_run_id ??
+    data?.source_run_id ??
+    null;
+  const rerunRunId = data?.run_id ?? null;
+  const isAiRerun = data?.trigger_source === "ai_rerun";
+  const canCompare = Boolean(patchId || (originalRunId && rerunRunId));
+
+  console.log("comparison ids", {
+    patchId,
+    originalRunId,
+    rerunRunId,
+  });
+
+  const patchComparisonQuery = useQuery({
+    queryKey: ["patch-comparison", patchId, originalRunId, rerunRunId],
+    queryFn: async () => {
+      if (originalRunId && rerunRunId) {
+        return compareRuns(originalRunId, rerunRunId);
+      }
+
+      if (patchId) {
+        // fallback (optional)
+        return getPatchComparison(patchId);
+      }
+
+      throw new Error("Comparison data is not available for this rerun.");
+    },
+    enabled: canCompare,
+    staleTime: 30_000,
+  });
 
   if (isLoading) {
     return <LoadingState label="Loading run details..." />;
@@ -260,6 +301,36 @@ export function RunDetailsPage() {
             setSelectedFailureOpen(true);
           }}
         />
+
+        {isAiRerun && !canCompare && (
+          <SectionCard title="Patch Comparison">
+            <div style={{ color: "#92400e" }}>
+              Comparison unavailable: rerun is missing patch_id or
+              original_run_id/source_run_id in the run details response.
+            </div>
+          </SectionCard>
+        )}
+
+        {isAiRerun && patchComparisonQuery.isLoading && (
+          <SectionCard title="Patch Comparison">
+            <div>Loading patch comparison...</div>
+          </SectionCard>
+        )}
+
+        {isAiRerun && patchComparisonQuery.isError && (
+          <SectionCard title="Patch Comparison">
+            <div style={{ color: "#b91c1c" }}>
+              Failed to load patch comparison:{" "}
+              {patchComparisonQuery.error instanceof Error
+                ? patchComparisonQuery.error.message
+                : JSON.stringify(patchComparisonQuery.error)}
+            </div>
+          </SectionCard>
+        )}
+
+        {isAiRerun && patchComparisonQuery.data && (
+          <PatchComparisonPanel comparison={patchComparisonQuery.data} />
+        )}
 
         <FailedTestsPanel failedTests={failedTestDetails} />
         <AiExplanationsPanel explanations={aiExplanations} />
