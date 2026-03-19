@@ -60,16 +60,14 @@ export function FailureDetailsModal({
   if (!open || !result) return null;
 
   const screenshotUrl =
-    result.screenshot_url ??
-    result.screenshot ??
-    result.screenshot_path ??
-    null;
+    typeof result.screenshot_url === "string" && result.screenshot_url.trim()
+      ? result.screenshot_url
+      : null;
 
   const traceUrl =
-    result.trace_url ??
-    result.trace ??
-    result.trace_path ??
-    null;
+    typeof result.trace_url === "string" && result.trace_url.trim()
+      ? result.trace_url
+      : null;
 
   const statusColor =
     result.status === "failed"

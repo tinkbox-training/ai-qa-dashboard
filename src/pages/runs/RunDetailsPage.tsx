@@ -91,74 +91,15 @@ export function RunDetailsPage() {
     ? data.execution_results
     : [];
 
-  const screenshots = Array.isArray(data.artifacts?.screenshots)
-    ? data.artifacts.screenshots
-    : [];
-
-  const traces = Array.isArray(data.artifacts?.traces)
-    ? data.artifacts.traces
-    : [];
-
-  const normalizePath = (value?: string | null) =>
-    (value ?? "").replace(/\//g, "\\").toLowerCase();
-
   const passRate = Number(data.execution_summary?.pass_rate ?? 0);
   const formattedPassRate = `${passRate.toFixed(1)}%`;
 
   const executionResults: ExecutionResultRow[] = rawExecutionResults.map(
-    (result) => {
-      const failedMatch = failedTestDetails.find(
-        (item: any) =>
-          item.title === result.title || item.suite === result.suite,
-      );
-
-      const screenshotAttachmentPath = normalizePath(
-        failedMatch?.attachments?.find((a: any) => a.name === "screenshot")
-          ?.path,
-      );
-
-      const traceAttachmentPath = normalizePath(
-        failedMatch?.attachments?.find((a: any) => a.name === "trace")?.path,
-      );
-
-      const matchedScreenshot =
-        screenshots.find((item: any) => {
-          const artifactPath = normalizePath(item.path);
-          return (
-            artifactPath &&
-            screenshotAttachmentPath &&
-            (screenshotAttachmentPath.endsWith(artifactPath) ||
-              artifactPath.endsWith(screenshotAttachmentPath))
-          );
-        }) ?? undefined;
-
-      const matchedTrace =
-        traces.find((item: any) => {
-          const artifactPath = normalizePath(item.path);
-          return (
-            artifactPath &&
-            traceAttachmentPath &&
-            (traceAttachmentPath.endsWith(artifactPath) ||
-              artifactPath.endsWith(traceAttachmentPath))
-          );
-        }) ?? undefined;
-
-      return {
-        ...result,
-        screenshot_url:
-          result.screenshot_url ??
-          matchedScreenshot?.url ??
-          (result.status === "failed" && screenshots.length === 1
-            ? screenshots[0].url
-            : undefined),
-        trace_url:
-          result.trace_url ??
-          matchedTrace?.url ??
-          (result.status === "failed" && traces.length === 1
-            ? traces[0].url
-            : undefined),
-      };
-    },
+    (result) => ({
+      ...result,
+      screenshot_url: result.screenshot_url,
+      trace_url: result.trace_url,
+    }),
   );
 
   const totalTests = Number(
