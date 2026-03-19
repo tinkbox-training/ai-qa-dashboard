@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 
@@ -20,9 +20,21 @@ import { FailedTestsPanel } from "./FailedTestsPanel";
 import { AiExplanationsPanel } from "./AiExplanationsPanel";
 import { FailureClustersPanel } from "./FailureClustersPanel";
 import { ArtifactsPanel } from "./ArtifactsPanel";
+import {
+  ExecutionResultsTable,
+  type ExecutionResultRow,
+} from "./ExecutionResultsTable";
+import { FailureDetailsModal } from "./FailureDetailsModal";
+
+type AiExplanation = {
+  title?: string;
+  [key: string]: any;
+};
 
 export function RunDetailsPage() {
   const { runId = "" } = useParams();
+  const [selectedFailure, setSelectedFailure] =
+    useState<ExecutionResultRow | null>(null);
 
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["runs", runId, "details"],
@@ -36,19 +48,116 @@ export function RunDetailsPage() {
 
   useRunPolling(runId, shouldPoll);
 
-  if (isLoading) return <LoadingState label="Loading run details..." />;
-  if (isError) return <ErrorState message={(error as Error).message} onRetry={refetch} />;
-  if (!data) return <ErrorState message="Run not found" />;
+  const aiExplanations: AiExplanation[] = Array.isArray(
+    data?.ai_failure_explanations,
+  )
+    ? data.ai_failure_explanations
+    : [];
+
+  const selectedExplanation = useMemo(() => {
+    if (!selectedFailure?.title) return null;
+
+    return (
+      aiExplanations.find((item) => item.title === selectedFailure.title) ??
+      null
+    );
+  }, [selectedFailure, aiExplanations]);
+
+  if (isLoading) {
+    return <LoadingState label="Loading run details..." />;
+  }
+
+  if (isError) {
+    return <ErrorState message={(error as Error).message} onRetry={refetch} />;
+  }
+
+  if (!data) {
+    return <ErrorState message="Run not found" />;
+  }
 
   const failedTestDetails = Array.isArray(data.failed_test_details)
     ? data.failed_test_details
     : [];
-  const aiExplanations = Array.isArray(data.ai_failure_explanations)
-    ? data.ai_failure_explanations
-    : [];
+
   const clusters = Array.isArray(data.failure_clusters?.clusters)
     ? data.failure_clusters.clusters
     : [];
+
+  const rawExecutionResults: ExecutionResultRow[] = Array.isArray(
+    data.execution_results,
+  )
+    ? data.execution_results
+    : [];
+
+  const screenshots = Array.isArray(data.artifacts?.screenshots)
+    ? data.artifacts.screenshots
+    : [];
+
+  const traces = Array.isArray(data.artifacts?.traces)
+    ? data.artifacts.traces
+    : [];
+
+  const normalizePath = (value?: string | null) =>
+    (value ?? "").replace(/\//g, "\\").toLowerCase();
+
+  const passRate = Number(data.execution_summary?.pass_rate ?? 0);
+  const formattedPassRate = `${passRate.toFixed(1)}%`;
+
+  const executionResults: ExecutionResultRow[] = rawExecutionResults.map(
+    (result) => {
+      const failedMatch = failedTestDetails.find(
+        (item: any) =>
+          item.title === result.title || item.suite === result.suite,
+      );
+
+      const screenshotAttachmentPath = normalizePath(
+        failedMatch?.attachments?.find((a: any) => a.name === "screenshot")
+          ?.path,
+      );
+
+      const traceAttachmentPath = normalizePath(
+        failedMatch?.attachments?.find((a: any) => a.name === "trace")?.path,
+      );
+
+      const matchedScreenshot =
+        screenshots.find((item: any) => {
+          const artifactPath = normalizePath(item.path);
+          return (
+            artifactPath &&
+            screenshotAttachmentPath &&
+            (screenshotAttachmentPath.endsWith(artifactPath) ||
+              artifactPath.endsWith(screenshotAttachmentPath))
+          );
+        }) ?? undefined;
+
+      const matchedTrace =
+        traces.find((item: any) => {
+          const artifactPath = normalizePath(item.path);
+          return (
+            artifactPath &&
+            traceAttachmentPath &&
+            (traceAttachmentPath.endsWith(artifactPath) ||
+              artifactPath.endsWith(traceAttachmentPath))
+          );
+        }) ?? undefined;
+
+      return {
+        ...result,
+        screenshot_url:
+          result.screenshot_url ??
+          matchedScreenshot?.url ??
+          (result.status === "failed" && screenshots.length === 1
+            ? screenshots[0].url
+            : undefined),
+        trace_url:
+          result.trace_url ??
+          matchedTrace?.url ??
+          (result.status === "failed" && traces.length === 1
+            ? traces[0].url
+            : undefined),
+      };
+    },
+  );
 
   return (
     <div>
@@ -81,10 +190,37 @@ export function RunDetailsPage() {
           marginBottom: "20px",
         }}
       >
-        <MetricCard label="Total" value={data.execution_summary?.total ?? data.total_tests ?? 0} />
-        <MetricCard label="Passed" value={data.execution_summary?.passed ?? data.passed_tests ?? 0} />
-        <MetricCard label="Failed" value={data.execution_summary?.failed ?? data.failed_tests ?? 0} />
-        <MetricCard label="Pass Rate" value={`${data.execution_summary?.pass_rate ?? 0}%`} />
+        <MetricCard
+          label="Total"
+          value={data.execution_summary?.total ?? data.total_tests ?? 0}
+        />
+        <MetricCard
+          label="Passed"
+          value={data.execution_summary?.passed ?? data.passed_tests ?? 0}
+          tone={
+            (data.execution_summary?.passed ?? data.passed_tests ?? 0) > 0
+              ? "success"
+              : "default"
+          }
+        />
+
+        <MetricCard
+          label="Failed"
+          value={data.execution_summary?.failed ?? data.failed_tests ?? 0}
+          tone={
+            (data.execution_summary?.failed ?? data.failed_tests ?? 0) > 0
+              ? "danger"
+              : "default"
+          }
+        />
+
+        <MetricCard
+          label="Pass Rate"
+          value={formattedPassRate}
+          tone={
+            passRate < 70 ? "danger" : passRate <= 80 ? "warning" : "success"
+          }
+        />
       </div>
 
       <div style={{ display: "grid", gap: "16px" }}>
@@ -98,11 +234,18 @@ export function RunDetailsPage() {
           details_available={data.details_available}
         />
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: "16px",
+          }}
+        >
           <SectionCard title="Requirements">
-            {Array.isArray(data.requirements) && data.requirements.length > 0 ? (
+            {Array.isArray(data.requirements) &&
+            data.requirements.length > 0 ? (
               <ul>
-                {data.requirements.map((item) => (
+                {data.requirements.map((item: string) => (
                   <li key={item}>{item}</li>
                 ))}
               </ul>
@@ -112,9 +255,10 @@ export function RunDetailsPage() {
           </SectionCard>
 
           <SectionCard title="Executed Files">
-            {Array.isArray(data.executed_files) && data.executed_files.length > 0 ? (
+            {Array.isArray(data.executed_files) &&
+            data.executed_files.length > 0 ? (
               <ul>
-                {data.executed_files.map((file) => (
+                {data.executed_files.map((file: string) => (
                   <li key={file}>{file}</li>
                 ))}
               </ul>
@@ -125,9 +269,10 @@ export function RunDetailsPage() {
         </div>
 
         <SectionCard title="Generated Tests">
-          {Array.isArray(data.generated_tests) && data.generated_tests.length > 0 ? (
+          {Array.isArray(data.generated_tests) &&
+          data.generated_tests.length > 0 ? (
             <div style={{ display: "grid", gap: "12px" }}>
-              {data.generated_tests.map((test, index) => (
+              {data.generated_tests.map((test: any, index: number) => (
                 <div
                   key={`${test.file ?? "generated"}-${index}`}
                   style={{
@@ -136,10 +281,18 @@ export function RunDetailsPage() {
                     padding: "12px",
                   }}
                 >
-                  <div><strong>Requirement:</strong> {test.requirement ?? "-"}</div>
-                  <div><strong>Status:</strong> {test.status ?? "-"}</div>
-                  <div><strong>Flow:</strong> {test.flow ?? "-"}</div>
-                  <div><strong>File:</strong> {test.file ?? "-"}</div>
+                  <div>
+                    <strong>Requirement:</strong> {test.requirement ?? "-"}
+                  </div>
+                  <div>
+                    <strong>Status:</strong> {test.status ?? "-"}
+                  </div>
+                  <div>
+                    <strong>Flow:</strong> {test.flow ?? "-"}
+                  </div>
+                  <div>
+                    <strong>File:</strong> {test.file ?? "-"}
+                  </div>
                 </div>
               ))}
             </div>
@@ -147,6 +300,11 @@ export function RunDetailsPage() {
             <div>No generated tests</div>
           )}
         </SectionCard>
+
+        <ExecutionResultsTable
+          results={executionResults}
+          onSelectFailure={(result) => setSelectedFailure(result)}
+        />
 
         <FailedTestsPanel failedTests={failedTestDetails} />
         <AiExplanationsPanel explanations={aiExplanations} />
@@ -159,6 +317,13 @@ export function RunDetailsPage() {
           </pre>
         </SectionCard>
       </div>
+
+      <FailureDetailsModal
+        open={!!selectedFailure}
+        onClose={() => setSelectedFailure(null)}
+        result={selectedFailure}
+        explanation={selectedExplanation}
+      />
     </div>
   );
 }

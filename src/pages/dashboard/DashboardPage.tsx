@@ -14,6 +14,7 @@ import { DashboardMetricsRow } from "./DashboardMetricsRow";
 import { ActiveRunsPanel } from "./ActiveRunsPanel";
 import { RecentRunsTable } from "./RecentRunsTable";
 
+
 export function DashboardPage() {
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["runs"],
