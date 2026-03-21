@@ -21,6 +21,9 @@ export function Sidebar() {
         <NavLink to="/runs" style={linkStyle}>
           Runs
         </NavLink>
+        <NavLink to="/insights" style={linkStyle}>
+          Insights
+        </NavLink>
       </nav>
     </aside>
   );

@@ -1,0 +1,55 @@
+import api from "./client";
+import type {
+  FailuresInsightsResponse,
+  PatchesInsightsResponse,
+  SummaryInsightsResponse,
+  TestsInsightsResponse,
+} from "../types/insights";
+
+export async function getInsightsSummary(days = 30, limit = 10) {
+  const { data } = await api.get<SummaryInsightsResponse>("/insights/summary", {
+    params: { days, limit },
+  });
+  return data;
+}
+
+export interface GetInsightTestsParams {
+  days?: number;
+  classification?: string;
+  impact_priority?: string;
+  search?: string;
+  sort_by?: "flaky_score" | "ci_impact_score" | "fail_rate" | "last_seen_at";
+}
+
+export async function getInsightTests(params: GetInsightTestsParams = {}) {
+  const { data } = await api.get<TestsInsightsResponse>("/insights/tests", {
+    params,
+  });
+  return data;
+}
+
+export interface GetInsightFailuresParams {
+  days?: number;
+  failure_type?: string;
+  limit?: number;
+}
+
+export async function getInsightFailures(params: GetInsightFailuresParams = {}) {
+  const { data } = await api.get<FailuresInsightsResponse>("/insights/failures", {
+    params,
+  });
+  return data;
+}
+
+export interface GetInsightPatchesParams {
+  days?: number;
+  limit?: number;
+  min_effectiveness_score?: number;
+}
+
+export async function getInsightPatches(params: GetInsightPatchesParams = {}) {
+  const { data } = await api.get<PatchesInsightsResponse>("/insights/patches", {
+    params,
+  });
+  return data;
+}
