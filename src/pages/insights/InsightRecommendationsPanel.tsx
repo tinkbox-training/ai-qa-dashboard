@@ -6,13 +6,6 @@ interface InsightRecommendationsPanelProps {
   recommendations: AIRecommendationItem[];
 }
 
-function mapPriorityToStatus(priority: string) {
-  const value = priority.toLowerCase();
-  if (value === "critical" || value === "high") return "danger";
-  if (value === "medium") return "warning";
-  return "success";
-}
-
 export function InsightRecommendationsPanel({
   recommendations,
 }: InsightRecommendationsPanelProps) {
@@ -41,10 +34,7 @@ export function InsightRecommendationsPanel({
                 }}
               >
                 <div style={{ fontWeight: 600 }}>{item.title}</div>
-                <StatusBadge
-                  status={mapPriorityToStatus(item.priority)}
-                  label={item.priority}
-                />
+                <StatusBadge status={item.priority} />
               </div>
 
               <div style={{ fontSize: 13, color: "#4b5563", marginBottom: 6 }}>

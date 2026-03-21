@@ -129,6 +129,7 @@ export function InsightsDashboardPage() {
               display: "grid",
               gridTemplateColumns: "minmax(0, 1.3fr) minmax(0, 1fr)",
               gap: 16,
+              alignItems: "start",
             }}
           >
             <InsightTrendPanel daily={summaryQuery.data?.trends.daily ?? []} />
@@ -140,8 +141,9 @@ export function InsightsDashboardPage() {
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)",
+              gridTemplateColumns: "minmax(0, 1.3fr) minmax(0, 1fr)",
               gap: 16,
+              alignItems: "start",
             }}
           >
             <InsightRecommendationsPanel
@@ -149,7 +151,12 @@ export function InsightsDashboardPage() {
             />
             <InsightPatchesPanel
               patches={patchesQuery.data?.patches ?? []}
-              bestPatch={patchesQuery.data?.best_patch ?? { patch_id: null, reason: null }}
+              bestPatch={
+                patchesQuery.data?.best_patch ?? {
+                  patch_id: null,
+                  reason: null,
+                }
+              }
             />
           </div>
 

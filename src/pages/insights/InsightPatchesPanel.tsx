@@ -7,19 +7,14 @@ interface InsightPatchesPanelProps {
   bestPatch: PatchBestItem;
 }
 
-function toPercent(value: number) {
-  return `${Math.round(value * 100)}%`;
+function formatPatchPercent(value: number | null | undefined) {
+  const safe = Number(value ?? 0);
+  return `${Math.round(safe)}%`;
 }
 
-function patchStatusLabel(value: string | null) {
-  return value ?? "unknown";
-}
-
-function patchStatusTone(value: string | null) {
-  const status = (value ?? "").toLowerCase();
-  if (status === "improved") return "success";
-  if (status === "regressed") return "danger";
-  return "warning";
+function formatScore(value: number | null | undefined) {
+  const safe = Number(value ?? 0);
+  return Number.isInteger(safe) ? String(safe) : safe.toFixed(2);
 }
 
 export function InsightPatchesPanel({
@@ -57,23 +52,22 @@ export function InsightPatchesPanel({
                     {patch.patch_id}
                   </td>
                   <td style={{ padding: "10px 8px" }}>
-                    <StatusBadge
-                      status={patchStatusTone(patch.comparison_status)}
-                      label={patchStatusLabel(patch.comparison_status)}
-                    />
+                    <StatusBadge status={patch.comparison_status ?? "unknown"} />
                   </td>
                   <td style={{ padding: "10px 8px" }}>
-                    {toPercent(patch.original_pass_rate)}
+                    {formatPatchPercent(patch.original_pass_rate)}
                   </td>
                   <td style={{ padding: "10px 8px" }}>
-                    {toPercent(patch.rerun_pass_rate)}
+                    {formatPatchPercent(patch.rerun_pass_rate)}
                   </td>
                   <td style={{ padding: "10px 8px" }}>
-                    {toPercent(patch.delta_pass_rate)}
+                    {formatPatchPercent(patch.delta_pass_rate)}
                   </td>
                   <td style={{ padding: "10px 8px" }}>{patch.fixed_tests_count}</td>
                   <td style={{ padding: "10px 8px" }}>{patch.regressed_tests_count}</td>
-                  <td style={{ padding: "10px 8px" }}>{patch.effectiveness_score}</td>
+                  <td style={{ padding: "10px 8px" }}>
+                    {formatScore(patch.effectiveness_score)}
+                  </td>
                 </tr>
               ))}
             </tbody>

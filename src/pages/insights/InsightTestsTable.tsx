@@ -10,20 +10,6 @@ function toPercent(value: number) {
   return `${Math.round(value * 100)}%`;
 }
 
-function mapClassificationTone(value: string) {
-  const normalized = value.toLowerCase();
-  if (normalized === "critical") return "danger";
-  if (normalized === "flaky" || normalized === "unstable") return "warning";
-  return "success";
-}
-
-function mapImpactTone(value: string) {
-  const normalized = value.toLowerCase();
-  if (normalized === "critical" || normalized === "high") return "danger";
-  if (normalized === "medium") return "warning";
-  return "success";
-}
-
 export function InsightTestsTable({ tests }: InsightTestsTableProps) {
   return (
     <SectionCard title="Test Stability Insights">
@@ -51,20 +37,14 @@ export function InsightTestsTable({ tests }: InsightTestsTableProps) {
                     {item.test_key}
                   </td>
                   <td style={{ padding: "10px 8px" }}>
-                    <StatusBadge
-                      status={mapClassificationTone(item.classification)}
-                      label={item.classification}
-                    />
+                    <StatusBadge status={item.classification} />
                   </td>
                   <td style={{ padding: "10px 8px" }}>{toPercent(item.pass_rate)}</td>
                   <td style={{ padding: "10px 8px" }}>{toPercent(item.fail_rate)}</td>
                   <td style={{ padding: "10px 8px" }}>{item.flaky_score}</td>
                   <td style={{ padding: "10px 8px" }}>{item.ci_impact_score}</td>
                   <td style={{ padding: "10px 8px" }}>
-                    <StatusBadge
-                      status={mapImpactTone(item.impact_priority)}
-                      label={item.impact_priority}
-                    />
+                    <StatusBadge status={item.impact_priority} />
                   </td>
                   <td style={{ padding: "10px 8px" }}>{item.last_seen_at ?? "—"}</td>
                 </tr>
