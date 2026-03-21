@@ -1,4 +1,4 @@
-import type { RunStatus } from '../../api/types';
+// import type { RunStatus } from '../../api/types';
 
 interface StatusBadgeProps {
   status?: string;
