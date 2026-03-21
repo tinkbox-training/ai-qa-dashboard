@@ -19,12 +19,17 @@ import { InsightRecommendationsPanel } from "./InsightRecommendationsPanel";
 import { InsightTestsTable } from "./InsightTestsTable";
 import { InsightTrendPanel } from "./InsightTrendPanel";
 
-export function InsightsDashboardPage() {
+export default function InsightsDashboardPage() {
   const [days, setDays] = useState(30);
 
   const summaryQuery = useQuery({
     queryKey: ["insights-summary", days],
     queryFn: () => getInsightsSummary(days, 10),
+  });
+
+  const previousSummaryQuery = useQuery({
+    queryKey: ["insights-summary-previous", days],
+    queryFn: () => getInsightsSummary(days * 2, 10),
   });
 
   const testsQuery = useQuery({
@@ -56,12 +61,14 @@ export function InsightsDashboardPage() {
 
   const isLoading =
     summaryQuery.isLoading ||
+    previousSummaryQuery.isLoading ||
     testsQuery.isLoading ||
     failuresQuery.isLoading ||
     patchesQuery.isLoading;
 
   const isError =
     summaryQuery.isError ||
+    previousSummaryQuery.isError ||
     testsQuery.isError ||
     failuresQuery.isError ||
     patchesQuery.isError;
@@ -69,6 +76,7 @@ export function InsightsDashboardPage() {
   const errorMessage = useMemo(() => {
     return (
       (summaryQuery.error as Error | undefined)?.message ||
+      (previousSummaryQuery.error as Error | undefined)?.message ||
       (testsQuery.error as Error | undefined)?.message ||
       (failuresQuery.error as Error | undefined)?.message ||
       (patchesQuery.error as Error | undefined)?.message ||
@@ -76,10 +84,16 @@ export function InsightsDashboardPage() {
     );
   }, [
     summaryQuery.error,
+    previousSummaryQuery.error,
     testsQuery.error,
     failuresQuery.error,
     patchesQuery.error,
   ]);
+
+  const previousOverview =
+    previousSummaryQuery.data?.overview != null && summaryQuery.data?.overview != null
+      ? previousSummaryQuery.data.overview
+      : null;
 
   return (
     <div style={{ display: "grid", gap: 20 }}>
@@ -115,13 +129,16 @@ export function InsightsDashboardPage() {
       </div>
 
       {isLoading ? (
-        <LoadingState message="Loading insights dashboard..." />
+        <LoadingState label="Loading insights dashboard..." />
       ) : isError ? (
-        <ErrorState title="Failed to load insights" message={errorMessage} />
+        <ErrorState message={errorMessage} />
       ) : (
         <>
           {summaryQuery.data && (
-            <InsightOverviewCards overview={summaryQuery.data.overview} />
+            <InsightOverviewCards
+              overview={summaryQuery.data.overview}
+              previousOverview={previousOverview}
+            />
           )}
 
           <div
@@ -141,7 +158,7 @@ export function InsightsDashboardPage() {
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "minmax(0, 1.3fr) minmax(0, 1fr)",
+              gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)",
               gap: 16,
               alignItems: "start",
             }}
@@ -151,12 +168,7 @@ export function InsightsDashboardPage() {
             />
             <InsightPatchesPanel
               patches={patchesQuery.data?.patches ?? []}
-              bestPatch={
-                patchesQuery.data?.best_patch ?? {
-                  patch_id: null,
-                  reason: null,
-                }
-              }
+              bestPatch={patchesQuery.data?.best_patch ?? { patch_id: null, reason: null }}
             />
           </div>
 

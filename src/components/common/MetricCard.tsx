@@ -1,61 +1,166 @@
+import type { ReactNode } from "react";
+
 interface MetricCardProps {
   label: string;
   value: string | number;
-  tone?: "default" | "success" | "danger" | "warning";
+  subtext?: string;
+  trendLabel?: string;
+  trendDirection?: "up" | "down" | "neutral";
+  icon?: ReactNode;
+  onClick?: () => void;
 }
 
-export function MetricCard({ label, value, tone = "default" }: MetricCardProps) {
-  const stylesByTone = {
-    default: {
-      background: "#ffffff",
-      border: "1px solid #e2e8f0",
-      labelColor: "#64748b",
-      valueColor: "#0f172a",
-    },
-    success: {
-      background: "#f0fdf4",
-      border: "1px solid #86efac",
-      labelColor: "#166534",
-      valueColor: "#166534",
-    },
-    danger: {
-      background: "#fef2f2",
-      border: "1px solid #fca5a5",
-      labelColor: "#991b1b",
-      valueColor: "#991b1b",
-    },
-    warning: {
-      background: "#fffbeb", // light yellow
-      border: "1px solid #fcd34d",
-      labelColor: "#92400e",
-      valueColor: "#92400e",
-    },
-  };
+function getTrendColor(direction?: "up" | "down" | "neutral") {
+  if (direction === "up") return "#166534";
+  if (direction === "down") return "#b91c1c";
+  return "#64748b";
+}
 
-  const current = stylesByTone[tone];
+function getTrendBackground(direction?: "up" | "down" | "neutral") {
+  if (direction === "up") return "#dcfce7";
+  if (direction === "down") return "#fee2e2";
+  return "#f1f5f9";
+}
 
-  return (
+function getTrendSymbol(direction?: "up" | "down" | "neutral") {
+  if (direction === "up") return "↑";
+  if (direction === "down") return "↓";
+  return "•";
+}
+
+export function MetricCard({
+  label,
+  value,
+  subtext,
+  trendLabel,
+  trendDirection = "neutral",
+  icon,
+  onClick,
+}: MetricCardProps) {
+  const clickable = typeof onClick === "function";
+
+  const content = (
     <div
       style={{
-        background: current.background,
-        border: current.border,
-        borderRadius: "12px",
-        padding: "16px",
+        background: "#ffffff",
+        border: "1px solid #e2e8f0",
+        borderRadius: 14,
+        padding: 16,
+        minHeight: 116,
+        display: "grid",
+        gridTemplateRows: "auto 1fr auto",
+        boxShadow: "0 1px 2px rgba(15, 23, 42, 0.04)",
+        cursor: clickable ? "pointer" : "default",
       }}
     >
-      <div style={{ color: current.labelColor, fontSize: "14px" }}>
-        {label}
-      </div>
       <div
         style={{
-          fontSize: "21px",
+          display: "flex",
+          alignItems: "flex-start",
+          justifyContent: "space-between",
+          gap: 12,
+        }}
+      >
+        <div
+          style={{
+            fontSize: 13,
+            color: "#64748b",
+            fontWeight: 500,
+            lineHeight: 1.2,
+          }}
+        >
+          {label}
+        </div>
+
+        {icon ? (
+          <div
+            style={{
+              color: "#94a3b8",
+              fontSize: 16,
+              lineHeight: 1,
+              flexShrink: 0,
+            }}
+          >
+            {icon}
+          </div>
+        ) : null}
+      </div>
+
+      <div
+        style={{
+          fontSize: 18,
           fontWeight: 700,
-          marginTop: "8px",
-          color: current.valueColor,
+          color: "#0f172a",
+          lineHeight: 1.15,
+          letterSpacing: "-0.2px",
+          marginTop: 10,
+          display: "flex",
+          alignItems: "center",
+          wordBreak: "break-word",
         }}
       >
         {value}
       </div>
+
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: 8,
+          marginTop: 10,
+          minHeight: 34,
+          justifyContent: "flex-end",
+        }}
+      >
+        {trendLabel ? (
+          <span
+            style={{
+              width: "fit-content",
+              fontSize: 12,
+              fontWeight: 600,
+              color: getTrendColor(trendDirection),
+              background: getTrendBackground(trendDirection),
+              borderRadius: 999,
+              padding: "2px 8px",
+            }}
+          >
+            {getTrendSymbol(trendDirection)} {trendLabel}
+          </span>
+        ) : (
+          <div style={{ height: 22 }} />
+        )}
+
+        {subtext ? (
+          <span
+            style={{
+              fontSize: 12,
+              color: "#64748b",
+              lineHeight: 1.2,
+            }}
+          >
+            {subtext}
+          </span>
+        ) : null}
+      </div>
     </div>
+  );
+
+  if (!clickable) return content;
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        border: "none",
+        background: "transparent",
+        padding: 0,
+        textAlign: "left",
+        width: "100%",
+      }}
+      title={`Open ${label.toLowerCase()}`}
+    >
+      {content}
+    </button>
   );
 }
