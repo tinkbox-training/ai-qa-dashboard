@@ -48,7 +48,7 @@ export function MetricCard({ label, value, tone = "default" }: MetricCardProps) 
       </div>
       <div
         style={{
-          fontSize: "28px",
+          fontSize: "21px",
           fontWeight: 700,
           marginTop: "8px",
           color: current.valueColor,

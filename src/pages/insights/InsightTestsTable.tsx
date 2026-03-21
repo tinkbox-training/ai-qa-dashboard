@@ -1,3 +1,5 @@
+import { useNavigate } from "react-router-dom";
+
 import { SectionCard } from "../../components/common/SectionCard";
 import { StatusBadge } from "../../components/common/StatusBadge";
 import type { TestInsightItem } from "../../types/insights";
@@ -10,7 +12,20 @@ function toPercent(value: number) {
   return `${Math.round(value * 100)}%`;
 }
 
+function formatTestDisplayName(testKey: string) {
+  const [filePart, titlePart] = testKey.split("::");
+
+  if (!titlePart) return testKey;
+  if ((filePart ?? "").trim().toLowerCase() === "unknown") {
+    return titlePart.trim();
+  }
+
+  return testKey;
+}
+
 export function InsightTestsTable({ tests }: InsightTestsTableProps) {
+  const navigate = useNavigate();
+
   return (
     <SectionCard title="Test Stability Insights">
       {tests.length === 0 ? (
@@ -32,9 +47,22 @@ export function InsightTestsTable({ tests }: InsightTestsTableProps) {
             </thead>
             <tbody>
               {tests.map((item) => (
-                <tr key={item.test_key} style={{ borderBottom: "1px solid #f3f4f6" }}>
+                <tr
+                  key={item.test_key}
+                  onClick={() =>
+                    navigate(`/runs?test_key=${encodeURIComponent(item.test_key)}`)
+                  }
+                  style={{
+                    borderBottom: "1px solid #f3f4f6",
+                    cursor: "pointer",
+                  }}
+                  title="Open related runs"
+                >
                   <td style={{ padding: "10px 8px", minWidth: 280 }}>
-                    {item.test_key}
+                    <div style={{ fontWeight: 600 }}>{formatTestDisplayName(item.test_key)}</div>
+                    <div style={{ fontSize: 12, color: "#64748b", marginTop: 4 }}>
+                      View related runs
+                    </div>
                   </td>
                   <td style={{ padding: "10px 8px" }}>
                     <StatusBadge status={item.classification} />

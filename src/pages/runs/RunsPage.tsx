@@ -1,6 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
+
 import { getRuns } from "../../api/runs";
 import { PageHeader } from "../../components/common/PageHeader";
 import { StatusBadge } from "../../components/common/StatusBadge";
@@ -10,10 +11,36 @@ import { SectionCard } from "../../components/common/SectionCard";
 import { formatDateTime } from "../../lib/format";
 import { RunsFilters } from "./RunsFilters";
 
+function normalizeText(value: string) {
+  return value.trim().toLowerCase();
+}
+
+function splitTestKey(testKey: string) {
+  const [rawFilePart, rawTitlePart] = testKey.split("::");
+
+  const filePart = (rawFilePart ?? "").trim();
+  const titlePart = (rawTitlePart ?? "").trim();
+
+  return {
+    filePart: filePart.toLowerCase() === "unknown" ? "" : filePart,
+    titlePart,
+  };
+}
+
 export function RunsPage() {
+  const [searchParams] = useSearchParams();
+
+  const testKeyFromUrl = searchParams.get("test_key");
+
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [sortOrder, setSortOrder] = useState("newest");
+
+  useEffect(() => {
+    if (testKeyFromUrl) {
+      setSearchTerm(testKeyFromUrl);
+    }
+  }, [testKeyFromUrl]);
 
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["runs"],
@@ -24,7 +51,7 @@ export function RunsPage() {
   const runs = data?.runs ?? [];
 
   const filteredRuns = useMemo(() => {
-    const normalizedSearch = searchTerm.trim().toLowerCase();
+    const normalizedSearch = normalizeText(searchTerm);
 
     let result = [...runs];
 
@@ -33,24 +60,37 @@ export function RunsPage() {
     }
 
     if (normalizedSearch) {
+      const { filePart, titlePart } = splitTestKey(normalizedSearch);
+
       result = result.filter((run) => {
-        const runIdMatch = run.run_id.toLowerCase().includes(normalizedSearch);
-        const requirementMatch = (run.requirements ?? []).some((req) =>
-          req.toLowerCase().includes(normalizedSearch),
+        const runIdMatch = normalizeText(run.run_id).includes(normalizedSearch);
+
+        const requirementMatch = (run.requirements ?? []).some((req: string) =>
+          normalizeText(req).includes(normalizedSearch)
         );
-        return runIdMatch || requirementMatch;
+
+        const executedFileMatch = (run.executed_files ?? []).some((file: string) => {
+          const normalizedFile = normalizeText(file);
+          return (
+            normalizedFile.includes(normalizedSearch) ||
+            (!!filePart && normalizedFile.includes(filePart))
+          );
+        });
+
+        const titleMatch =
+          !!titlePart &&
+          (run.requirements ?? []).some((req: string) =>
+            normalizeText(req).includes(titlePart)
+          );
+
+        return runIdMatch || requirementMatch || executedFileMatch || titleMatch;
       });
     }
 
     result.sort((a, b) => {
       const aTime = new Date(a.timestamp).getTime();
       const bTime = new Date(b.timestamp).getTime();
-
-      if (sortOrder === "oldest") {
-        return aTime - bTime;
-      }
-
-      return bTime - aTime;
+      return sortOrder === "oldest" ? aTime - bTime : bTime - aTime;
     });
 
     return result;
@@ -63,12 +103,20 @@ export function RunsPage() {
   }
 
   if (isLoading) return <LoadingState label="Loading runs..." />;
-  if (isError)
+  if (isError) {
     return <ErrorState message={(error as Error).message} onRetry={refetch} />;
+  }
 
   return (
     <div>
-      <PageHeader title="Runs" subtitle="All executions" />
+      <PageHeader
+        title="Runs"
+        subtitle={
+          testKeyFromUrl
+            ? `Filtered by test: ${testKeyFromUrl}`
+            : "All executions"
+        }
+      />
 
       <div style={{ marginBottom: "20px" }}>
         <SectionCard title="Filters">
@@ -108,19 +156,13 @@ export function RunsPage() {
             <tbody>
               {filteredRuns.length === 0 ? (
                 <tr>
-                  <td
-                    colSpan={7}
-                    style={{ padding: "20px 0", color: "#64748b" }}
-                  >
+                  <td colSpan={7} style={{ padding: "20px 0", color: "#64748b" }}>
                     No runs matched your filters.
                   </td>
                 </tr>
               ) : (
                 filteredRuns.map((run) => (
-                  <tr
-                    key={run.run_id}
-                    style={{ borderTop: "1px solid #e2e8f0" }}
-                  >
+                  <tr key={run.run_id} style={{ borderTop: "1px solid #e2e8f0" }}>
                     <td style={{ padding: "12px 0" }}>
                       <Link to={`/runs/${run.run_id}`}>{run.run_id}</Link>
                     </td>
@@ -132,7 +174,11 @@ export function RunsPage() {
                     <td>{run.execution_summary?.total ?? 0}</td>
                     <td style={{ maxWidth: "320px" }}>
                       {run.requirements?.length
-                        ? `${run.requirements[0]}${run.requirements.length > 1 ? ` +${run.requirements.length - 1} more` : ""}`
+                        ? `${run.requirements[0]}${
+                            run.requirements.length > 1
+                              ? ` +${run.requirements.length - 1} more`
+                              : ""
+                          }`
                         : "-"}
                     </td>
                     <td>{formatDateTime(run.timestamp)}</td>

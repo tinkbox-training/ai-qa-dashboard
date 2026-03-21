@@ -1,3 +1,5 @@
+import { useNavigate } from "react-router-dom";
+
 import { SectionCard } from "../../components/common/SectionCard";
 import { StatusBadge } from "../../components/common/StatusBadge";
 import type { PatchInsightItem, PatchBestItem } from "../../types/insights";
@@ -21,10 +23,35 @@ export function InsightPatchesPanel({
   patches,
   bestPatch,
 }: InsightPatchesPanelProps) {
+  const navigate = useNavigate();
+
+  const bestPatchRow =
+    bestPatch.patch_id != null
+      ? patches.find((patch) => patch.patch_id === bestPatch.patch_id)
+      : undefined;
+
   return (
     <SectionCard title="Patch Effectiveness">
       <div style={{ marginBottom: 12, color: "#4b5563", fontSize: 14 }}>
-        <strong>Best patch:</strong> {bestPatch.patch_id ?? "—"}
+        <strong>Best patch:</strong>{" "}
+        {bestPatchRow?.rerun_run_id ? (
+          <button
+            type="button"
+            onClick={() => navigate(`/runs/${bestPatchRow.rerun_run_id}`)}
+            style={{
+              background: "none",
+              border: "none",
+              padding: 0,
+              color: "#2563eb",
+              cursor: "pointer",
+              fontWeight: 600,
+            }}
+          >
+            {bestPatch.patch_id}
+          </button>
+        ) : (
+          bestPatch.patch_id ?? "—"
+        )}
         {bestPatch.reason ? ` — ${bestPatch.reason}` : ""}
       </div>
 
@@ -47,9 +74,26 @@ export function InsightPatchesPanel({
             </thead>
             <tbody>
               {patches.slice(0, 10).map((patch) => (
-                <tr key={patch.patch_id} style={{ borderBottom: "1px solid #f3f4f6" }}>
+                <tr
+                  key={patch.patch_id}
+                  onClick={() => {
+                    if (patch.rerun_run_id) {
+                      navigate(`/runs/${patch.rerun_run_id}`);
+                    }
+                  }}
+                  style={{
+                    borderBottom: "1px solid #f3f4f6",
+                    cursor: patch.rerun_run_id ? "pointer" : "default",
+                  }}
+                  title={patch.rerun_run_id ? "Open rerun details" : undefined}
+                >
                   <td style={{ padding: "10px 8px", whiteSpace: "nowrap" }}>
-                    {patch.patch_id}
+                    <div style={{ fontWeight: 600 }}>{patch.patch_id}</div>
+                    {patch.rerun_run_id && (
+                      <div style={{ fontSize: 12, color: "#64748b", marginTop: 4 }}>
+                        Open rerun: {patch.rerun_run_id}
+                      </div>
+                    )}
                   </td>
                   <td style={{ padding: "10px 8px" }}>
                     <StatusBadge status={patch.comparison_status ?? "unknown"} />
