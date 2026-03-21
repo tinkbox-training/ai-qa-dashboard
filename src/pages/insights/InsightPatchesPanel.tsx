@@ -45,7 +45,9 @@ export function InsightPatchesPanel({
               color: "#2563eb",
               cursor: "pointer",
               fontWeight: 600,
+              textDecoration: "underline",
             }}
+            title="Open best patch rerun details"
           >
             {bestPatch.patch_id}
           </button>

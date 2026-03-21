@@ -31,6 +31,9 @@ export function RunsPage() {
   const [searchParams] = useSearchParams();
 
   const testKeyFromUrl = searchParams.get("test_key");
+  const classificationFromUrl = searchParams.get("classification");
+  const impactPriorityFromUrl = searchParams.get("impact_priority");
+  const failureTypeFromUrl = searchParams.get("failure_type");
 
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("all");
@@ -39,8 +42,28 @@ export function RunsPage() {
   useEffect(() => {
     if (testKeyFromUrl) {
       setSearchTerm(testKeyFromUrl);
+      return;
     }
-  }, [testKeyFromUrl]);
+
+    if (failureTypeFromUrl) {
+      setSearchTerm(failureTypeFromUrl);
+      return;
+    }
+
+    if (classificationFromUrl) {
+      setSearchTerm(classificationFromUrl);
+      return;
+    }
+
+    if (impactPriorityFromUrl) {
+      setSearchTerm(impactPriorityFromUrl);
+    }
+  }, [
+    testKeyFromUrl,
+    classificationFromUrl,
+    impactPriorityFromUrl,
+    failureTypeFromUrl,
+  ]);
 
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["runs"],
@@ -73,14 +96,14 @@ export function RunsPage() {
           const normalizedFile = normalizeText(file);
           return (
             normalizedFile.includes(normalizedSearch) ||
-            (!!filePart && normalizedFile.includes(filePart))
+            (!!filePart && normalizedFile.includes(normalizeText(filePart)))
           );
         });
 
         const titleMatch =
           !!titlePart &&
           (run.requirements ?? []).some((req: string) =>
-            normalizeText(req).includes(titlePart)
+            normalizeText(req).includes(normalizeText(titlePart))
           );
 
         return runIdMatch || requirementMatch || executedFileMatch || titleMatch;
@@ -90,6 +113,7 @@ export function RunsPage() {
     result.sort((a, b) => {
       const aTime = new Date(a.timestamp).getTime();
       const bTime = new Date(b.timestamp).getTime();
+
       return sortOrder === "oldest" ? aTime - bTime : bTime - aTime;
     });
 
@@ -102,6 +126,16 @@ export function RunsPage() {
     setSortOrder("newest");
   }
 
+  function buildSubtitle() {
+    if (testKeyFromUrl) return `Filtered by test: ${testKeyFromUrl}`;
+    if (failureTypeFromUrl) return `Filtered by failure type: ${failureTypeFromUrl}`;
+    if (classificationFromUrl) return `Filtered by classification: ${classificationFromUrl}`;
+    if (impactPriorityFromUrl) {
+      return `Filtered by impact priority: ${impactPriorityFromUrl}`;
+    }
+    return "All executions";
+  }
+
   if (isLoading) return <LoadingState label="Loading runs..." />;
   if (isError) {
     return <ErrorState message={(error as Error).message} onRetry={refetch} />;
@@ -109,14 +143,7 @@ export function RunsPage() {
 
   return (
     <div>
-      <PageHeader
-        title="Runs"
-        subtitle={
-          testKeyFromUrl
-            ? `Filtered by test: ${testKeyFromUrl}`
-            : "All executions"
-        }
-      />
+      <PageHeader title="Runs" subtitle={buildSubtitle()} />
 
       <div style={{ marginBottom: "20px" }}>
         <SectionCard title="Filters">

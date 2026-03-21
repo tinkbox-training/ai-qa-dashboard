@@ -50,18 +50,20 @@ export function InsightTestsTable({ tests }: InsightTestsTableProps) {
                 <tr
                   key={item.test_key}
                   onClick={() =>
-                    navigate(`/runs?test_key=${encodeURIComponent(item.test_key)}`)
+                    navigate(`/insights?search=${encodeURIComponent(item.test_key)}`)
                   }
                   style={{
                     borderBottom: "1px solid #f3f4f6",
                     cursor: "pointer",
                   }}
-                  title="Open related runs"
+                  title="Filter insights by this test"
                 >
                   <td style={{ padding: "10px 8px", minWidth: 280 }}>
-                    <div style={{ fontWeight: 600 }}>{formatTestDisplayName(item.test_key)}</div>
+                    <div style={{ fontWeight: 600 }}>
+                      {formatTestDisplayName(item.test_key)}
+                    </div>
                     <div style={{ fontSize: 12, color: "#64748b", marginTop: 4 }}>
-                      View related runs
+                      Filter insights by this test
                     </div>
                   </td>
                   <td style={{ padding: "10px 8px" }}>
