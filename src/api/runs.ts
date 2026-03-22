@@ -1,15 +1,17 @@
-
 import api from "./client";
-import type { RunsResponse, RunStatusResponse, CreateRunPayload } from "./types";
+import type { RunsResponse, RunStatusResponse } from "./types";
 
 export interface RunDetailsResponse {
   run_id: string;
   status: string;
   trigger_source?: string | null;
+
   created_at?: string | null;
   started_at?: string | null;
   completed_at?: string | null;
+
   details_available?: boolean;
+
   requirements?: string[];
   executed_files?: string[];
   generated_tests?: any[];
@@ -18,6 +20,12 @@ export interface RunDetailsResponse {
   failure_clusters?: any;
   execution_results?: any[];
   artifacts?: any;
+  execution_options?: {
+    base_url?: string | null;
+    self_healing?: boolean;
+    generate_negative_variants?: boolean;
+  } | null;
+
   execution_summary?: {
     total?: number;
     passed?: number;
@@ -25,24 +33,25 @@ export interface RunDetailsResponse {
     skipped?: number;
     pass_rate?: number;
   };
+
   total_tests?: number;
   passed_tests?: number;
   failed_tests?: number;
+
   patch_id?: string | null;
   original_run_id?: string | null;
   source_run_id?: string | null;
-  patch_suggestions?: any[];
-  run_recommendations?: any;
-  run_meta?: {
-    base_url?: string | null;
-    self_healing?: boolean | null;
-    generate_negative_variants?: boolean | null;
-    [key: string]: unknown;
-  } | null;
   patch?: {
     patch_id?: string | null;
     original_run_id?: string | null;
   } | null;
+}
+
+export interface CreateRunPayload {
+  requirements: string[];
+  base_url?: string;
+  self_healing?: boolean;
+  generate_negative_variants?: boolean;
 }
 
 export async function getRuns(): Promise<RunsResponse> {
@@ -55,7 +64,9 @@ export async function getRunStatus(runId: string): Promise<RunStatusResponse> {
   return data;
 }
 
-export async function getRunDetails(runId: string): Promise<RunDetailsResponse> {
+export async function getRunDetails(
+  runId: string
+): Promise<RunDetailsResponse> {
   const { data } = await api.get<RunDetailsResponse>(`/runs/${runId}`);
   return data;
 }
@@ -73,15 +84,5 @@ export async function createRun(payload: CreateRunPayload): Promise<{
     message: string;
   }>("/generate-multiple-tests", payload);
 
-  return data;
-}
-
-export async function previewNegativeTests(payload: {
-  requirements: string[];
-}): Promise<{ generated_requirements: string[] }> {
-  const { data } = await api.post<{ generated_requirements: string[] }>(
-    "/generate-negative-tests-preview",
-    payload,
-  );
   return data;
 }

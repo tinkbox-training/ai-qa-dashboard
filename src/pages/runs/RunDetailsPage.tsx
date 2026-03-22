@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { getRunDetails } from "../../api/runs";
-import { getRunRecommendations } from "../../api/recommendations";
 import { useRunPolling } from "../../hooks/useRunPolling";
 
 import { PageHeader } from "../../components/common/PageHeader";
@@ -26,9 +25,6 @@ import {
   type ExecutionResultRow,
 } from "./ExecutionResultsTable";
 import { FailureDetailsModal } from "./FailureDetailsModal";
-import { TestDetailPanel } from "./TestDetailPanel";
-import { FailureClusterModal } from "./FailureClusterModal";
-import { RunRecommendationsPanel } from "./RunRecommendationsPanel";
 
 import { ApplyPatchActionCard } from "../../components/patches/ApplyPatchActionCard";
 import { PartialRerunWarning } from "../../components/patches/PartialRerunWarning";
@@ -234,14 +230,11 @@ function getBestPatch(
 
 export function RunDetailsPage() {
   const { runId = "" } = useParams();
-  const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
 
   const [selectedFailure, setSelectedFailure] =
     useState<ExecutionResultRow | null>(null);
   const [selectedFailureOpen, setSelectedFailureOpen] = useState(false);
-  const [selectedTest, setSelectedTest] = useState<ExecutionResultRow | null>(null);
-  const [selectedCluster, setSelectedCluster] = useState<any | null>(null);
 
   const [activePatchId, setActivePatchId] = useState<string | null>(null);
   const [activeRerunRunId, setActiveRerunRunId] = useState<string | null>(null);
@@ -303,13 +296,6 @@ export function RunDetailsPage() {
   const patchHistory = useMemo(() => {
     return sortPatchHistory(safeArray<PatchHistoryItem>(patchHistoryQuery.data));
   }, [patchHistoryQuery.data]);
-
-  const recommendationsQuery = useQuery({
-    queryKey: ["run-recommendations", runId],
-    queryFn: () => getRunRecommendations(runId),
-    enabled: Boolean(runId),
-    staleTime: 30_000,
-  });
 
   const effectivePatchRerunRunId =
     activeRerunRunId ??
@@ -440,21 +426,6 @@ export function RunDetailsPage() {
       trace_url: result.trace_url,
     }),
   );
-
-  const selectedTestFromUrl = searchParams.get("test");
-  const selectedClusterFromUrl = searchParams.get("cluster");
-
-  useEffect(() => {
-    if (!selectedTestFromUrl) return;
-    const found = executionResults.find((item) => item.title === selectedTestFromUrl) ?? null;
-    if (found) setSelectedTest((prev: ExecutionResultRow | null) => prev?.title === found.title ? prev : found);
-  }, [selectedTestFromUrl, executionResults]);
-
-  useEffect(() => {
-    if (!selectedClusterFromUrl) return;
-    const found = clusters.find((item: any) => item.failure_type === selectedClusterFromUrl) ?? null;
-    if (found) setSelectedCluster((prev: any) => prev?.failure_type === found.failure_type ? prev : found);
-  }, [selectedClusterFromUrl, clusters]);
 
   const totalTests = Number(
     data.execution_summary?.total ?? data.total_tests ?? 0,
@@ -616,6 +587,24 @@ export function RunDetailsPage() {
           </SectionCard>
         </div>
 
+
+        <SectionCard title="Execution Options">
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px" }}>
+            <div style={metricLikeCard}>
+              <div style={metricLabel}>Base URL</div>
+              <div style={metricValue}>{data.execution_options?.base_url ?? "Default sample site"}</div>
+            </div>
+            <div style={metricLikeCard}>
+              <div style={metricLabel}>Self-Healing</div>
+              <div style={metricValue}>{data.execution_options?.self_healing ? "Enabled" : "Disabled"}</div>
+            </div>
+            <div style={metricLikeCard}>
+              <div style={metricLabel}>Negative Variants</div>
+              <div style={metricValue}>{data.execution_options?.generate_negative_variants ? "Enabled" : "Disabled"}</div>
+            </div>
+          </div>
+        </SectionCard>
+
         <SectionCard title="Generated Tests">
           {Array.isArray(data.generated_tests) &&
           data.generated_tests.length > 0 ? (
@@ -700,15 +689,6 @@ export function RunDetailsPage() {
             </div>
           </div>
         </SectionCard>
-
-        <RunRecommendationsPanel
-          data={recommendationsQuery.data}
-          isApplying={applyPatchMutation.isPending}
-          onApplyBestPatch={(patchId) => {
-            const patch = patchCandidates.find((item) => item.patch_id === patchId);
-            if (patch) applyPatchMutation.mutate(patch);
-          }}
-        />
 
         <SectionCard title="Apply Patch and Rerun">
           <div style={{ display: "grid", gap: "16px" }}>
@@ -884,31 +864,15 @@ export function RunDetailsPage() {
 
         <ExecutionResultsTable
           results={executionResults}
-          selectedTitle={selectedTest?.title ?? selectedTestFromUrl}
           onSelectFailure={(result) => {
             setSelectedFailure(result);
-            setSelectedTest(result);
             setSelectedFailureOpen(true);
-            const next = new URLSearchParams(searchParams);
-            if (result.title) next.set("test", result.title);
-            setSearchParams(next, { replace: true });
           }}
         />
-
-        <TestDetailPanel result={selectedTest} />
 
         <FailedTestsPanel failedTests={failedTestDetails} />
         <AiExplanationsPanel explanations={aiExplanations} />
-        <FailureClustersPanel
-          clusters={clusters}
-          selectedFailureType={selectedCluster?.failure_type ?? selectedClusterFromUrl}
-          onSelectCluster={(cluster) => {
-            setSelectedCluster(cluster);
-            const next = new URLSearchParams(searchParams);
-            next.set("cluster", cluster.failure_type ?? "cluster");
-            setSearchParams(next, { replace: true });
-          }}
-        />
+        <FailureClustersPanel clusters={clusters} />
         <ArtifactsPanel artifacts={data.artifacts} />
 
         <SectionCard title="Raw Run JSON">
@@ -917,17 +881,6 @@ export function RunDetailsPage() {
           </pre>
         </SectionCard>
       </div>
-
-      <FailureClusterModal
-        open={Boolean(selectedCluster)}
-        cluster={selectedCluster}
-        onClose={() => {
-          setSelectedCluster(null);
-          const next = new URLSearchParams(searchParams);
-          next.delete("cluster");
-          setSearchParams(next, { replace: true });
-        }}
-      />
 
       <FailureDetailsModal
         open={selectedFailureOpen}

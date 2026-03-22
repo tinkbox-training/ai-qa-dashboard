@@ -137,11 +137,9 @@ export interface RunDetails {
   failure_clusters?: FailureClusters;
   timestamp?: string;
   run_meta?: Record<string, unknown>;
-}
-
-export interface CreateRunPayload {
-  requirements: string[];
-  base_url?: string;
-  self_healing?: boolean;
-  generate_negative_variants?: boolean;
+  execution_options?: {
+    base_url?: string | null;
+    self_healing?: boolean;
+    generate_negative_variants?: boolean;
+  };
 }
