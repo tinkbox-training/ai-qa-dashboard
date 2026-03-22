@@ -15,9 +15,10 @@ export type ExecutionResultRow = {
 interface Props {
   results: ExecutionResultRow[];
   onSelectFailure: (result: ExecutionResultRow) => void;
+  selectedTitle?: string | null;
 }
 
-export function ExecutionResultsTable({ results, onSelectFailure }: Props) {
+export function ExecutionResultsTable({ results, onSelectFailure, selectedTitle }: Props) {
   const handleOpenFailure = (result: ExecutionResultRow) => {
     const cleanedError =
       result.error && result.error !== "None" ? stripAnsi(result.error) : "";
@@ -59,13 +60,15 @@ export function ExecutionResultsTable({ results, onSelectFailure }: Props) {
 
                 const isFailed = result.status === "failed";
 
+                const isActive = selectedTitle != null && selectedTitle === (result.title ?? null);
+
                 return (
                   <tr
                     key={`execution-row-${index}-${result.title ?? "untitled"}`}
                     style={{
                       borderBottom: "1px solid #f1f5f9",
                       cursor: isFailed ? "pointer" : "default",
-                      background: isFailed ? "#fff7f7" : "transparent",
+                      background: isActive ? "#eff6ff" : isFailed ? "#fff7f7" : "transparent",
                     }}
                     onClick={() => {
                       if (isFailed) {

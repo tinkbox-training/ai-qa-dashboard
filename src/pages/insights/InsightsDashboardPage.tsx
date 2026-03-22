@@ -6,7 +6,7 @@ import {
   getInsightFailures,
   getInsightPatches,
   getInsightsSummary,
-  getInsightTests,
+  getInsightRuns,
 } from "../../api/insights";
 
 import { ErrorState } from "../../components/common/ErrorState";
@@ -42,7 +42,7 @@ export default function InsightsDashboardPage() {
   const testsQuery = useQuery({
     queryKey: ["insights-tests", days, classification, impactPriority, search],
     queryFn: () =>
-      getInsightTests({
+      getInsightRuns({
         days,
         classification,
         impact_priority: impactPriority,

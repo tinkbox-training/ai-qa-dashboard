@@ -1,3 +1,4 @@
+
 import type { ReactNode } from "react";
 
 interface MetricCardProps {
@@ -8,6 +9,8 @@ interface MetricCardProps {
   trendDirection?: "up" | "down" | "neutral";
   icon?: ReactNode;
   onClick?: () => void;
+  tone?: "success" | "danger" | "warning" | "default";
+  active?: boolean;
 }
 
 function getTrendColor(direction?: "up" | "down" | "neutral") {
@@ -28,6 +31,19 @@ function getTrendSymbol(direction?: "up" | "down" | "neutral") {
   return "•";
 }
 
+function getToneStyles(tone?: MetricCardProps["tone"]) {
+  switch (tone) {
+    case "success":
+      return { borderColor: "#86efac", background: "#f0fdf4" };
+    case "danger":
+      return { borderColor: "#fecaca", background: "#fef2f2" };
+    case "warning":
+      return { borderColor: "#fde68a", background: "#fffbeb" };
+    default:
+      return { borderColor: "#e2e8f0", background: "#ffffff" };
+  }
+}
+
 export function MetricCard({
   label,
   value,
@@ -36,21 +52,27 @@ export function MetricCard({
   trendDirection = "neutral",
   icon,
   onClick,
+  tone = "default",
+  active = false,
 }: MetricCardProps) {
   const clickable = typeof onClick === "function";
+  const toneStyles = getToneStyles(tone);
 
   const content = (
     <div
       style={{
-        background: "#ffffff",
-        border: "1px solid #e2e8f0",
+        background: active ? "#eff6ff" : toneStyles.background,
+        border: `1px solid ${active ? "#60a5fa" : toneStyles.borderColor}`,
         borderRadius: 14,
         padding: 16,
         minHeight: 116,
         display: "grid",
         gridTemplateRows: "auto 1fr auto",
-        boxShadow: "0 1px 2px rgba(15, 23, 42, 0.04)",
+        boxShadow: active
+          ? "0 0 0 3px rgba(59, 130, 246, 0.12)"
+          : "0 1px 2px rgba(15, 23, 42, 0.04)",
         cursor: clickable ? "pointer" : "default",
+        transition: "border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease",
       }}
     >
       <div
@@ -75,7 +97,7 @@ export function MetricCard({
         {icon ? (
           <div
             style={{
-              color: "#94a3b8",
+              color: active ? "#2563eb" : "#94a3b8",
               fontSize: 16,
               lineHeight: 1,
               flexShrink: 0,
@@ -90,7 +112,7 @@ export function MetricCard({
         style={{
           fontSize: 18,
           fontWeight: 700,
-          color: "#0f172a",
+          color: active ? "#1d4ed8" : "#0f172a",
           lineHeight: 1.15,
           letterSpacing: "-0.2px",
           marginTop: 10,

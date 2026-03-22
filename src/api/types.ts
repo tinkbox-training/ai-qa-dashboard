@@ -138,3 +138,10 @@ export interface RunDetails {
   timestamp?: string;
   run_meta?: Record<string, unknown>;
 }
+
+export interface CreateRunPayload {
+  requirements: string[];
+  base_url?: string;
+  self_healing?: boolean;
+  generate_negative_variants?: boolean;
+}
