@@ -108,6 +108,25 @@ function getExecutionSummary(data: any) {
   };
 }
 
+function getDisplayStatus(data: any) {
+  const lifecycleStatus = data?.status;
+  const summary = getExecutionSummary(data);
+
+  if (lifecycleStatus === "queued" || lifecycleStatus === "running") {
+    return lifecycleStatus;
+  }
+
+  if (summary.failed > 0) {
+    return "failed";
+  }
+
+  if (summary.total > 0 && summary.passed === summary.total) {
+    return "passed";
+  }
+
+  return lifecycleStatus ?? "unknown";
+}
+
 function getPatchCandidatesFromRun(data: any): PatchCandidate[] {
   const directCandidates = normalizePatchSuggestions(
     data?.patch_suggestions ??
@@ -402,6 +421,8 @@ export function RunDetailsPage() {
     return <ErrorState message="Run not found" />;
   }
 
+  const displayStatus = getDisplayStatus(data);
+  const summary = getExecutionSummary(data);
   const failedTestDetails = Array.isArray(data.failed_test_details)
     ? data.failed_test_details
     : [];
@@ -416,7 +437,7 @@ export function RunDetailsPage() {
     ? data.execution_results
     : [];
 
-  const passRate = Number(data.execution_summary?.pass_rate ?? 0);
+  const passRate = summary.pass_rate;
   const formattedPassRate = `${passRate.toFixed(1)}%`;
 
   const executionResults: ExecutionResultRow[] = rawExecutionResults.map(
@@ -427,18 +448,20 @@ export function RunDetailsPage() {
     }),
   );
 
-  const totalTests = Number(
-    data.execution_summary?.total ?? data.total_tests ?? 0,
-  );
+  const totalTests = summary.total;
+  const passedTests = summary.passed;
+  const failedTests = summary.failed;
 
   const passRateTone =
-    passRate === 0 || totalTests === 0
+    totalTests === 0
       ? "default"
-      : passRate < 70
+      : passRate === 0
         ? "danger"
-        : passRate <= 80
-          ? "warning"
-          : "success";
+        : passRate < 70
+          ? "danger"
+          : passRate <= 80
+            ? "warning"
+            : "success";
 
   const bestPatch = getBestPatch(patchCandidates, patchHistory);
 
@@ -487,11 +510,11 @@ export function RunDetailsPage() {
       <PageHeader
         title={`Run ${data.run_id}`}
         subtitle="Execution details, failures, artifacts, AI analysis, and patch rerun workflow"
-        actions={<StatusBadge status={data.status} />}
+        actions={<StatusBadge status={displayStatus as any} />}
       />
 
       <RunStatusBanner
-        status={data.status}
+        status={displayStatus as any}
         created_at={data.created_at ?? undefined}
         started_at={data.started_at ?? undefined}
         completed_at={data.completed_at ?? undefined}
@@ -515,25 +538,18 @@ export function RunDetailsPage() {
       >
         <MetricCard
           label="Total"
-          value={data.execution_summary?.total ?? data.total_tests ?? 0}
+          value={totalTests}
+          tone={totalTests > 0 ? "default" : "default"}
         />
         <MetricCard
           label="Passed"
-          value={data.execution_summary?.passed ?? data.passed_tests ?? 0}
-          tone={
-            (data.execution_summary?.passed ?? data.passed_tests ?? 0) > 0
-              ? "success"
-              : "default"
-          }
+          value={passedTests}
+          tone={passedTests > 0 ? "success" : "default"}
         />
         <MetricCard
           label="Failed"
-          value={data.execution_summary?.failed ?? data.failed_tests ?? 0}
-          tone={
-            (data.execution_summary?.failed ?? data.failed_tests ?? 0) > 0
-              ? "danger"
-              : "default"
-          }
+          value={failedTests}
+          tone={failedTests > 0 ? "danger" : "default"}
         />
         <MetricCard
           label="Pass Rate"
@@ -586,7 +602,6 @@ export function RunDetailsPage() {
             )}
           </SectionCard>
         </div>
-
 
         <SectionCard title="Execution Options">
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px" }}>
@@ -749,14 +764,15 @@ export function RunDetailsPage() {
                         label="Pass Rate"
                         value={`${latestRerunSummary.pass_rate.toFixed(1)}%`}
                         tone={
-                          latestRerunSummary.pass_rate === 0 ||
                           latestRerunSummary.total === 0
                             ? "default"
-                            : latestRerunSummary.pass_rate < 70
+                            : latestRerunSummary.pass_rate === 0
                               ? "danger"
-                              : latestRerunSummary.pass_rate <= 80
-                                ? "warning"
-                                : "success"
+                              : latestRerunSummary.pass_rate < 70
+                                ? "danger"
+                                : latestRerunSummary.pass_rate <= 80
+                                  ? "warning"
+                                  : "success"
                         }
                       />
                     </div>
@@ -764,7 +780,8 @@ export function RunDetailsPage() {
                     <div>
                       <strong>Latest patch rerun:</strong>{" "}
                       {latestRerunData.run_id ?? "-"} <br />
-                      <strong>Status:</strong> {latestRerunData.status ?? "-"}
+                      <strong>Status:</strong>{" "}
+                      {getDisplayStatus(latestRerunData)}
                     </div>
                   </div>
                 ) : (

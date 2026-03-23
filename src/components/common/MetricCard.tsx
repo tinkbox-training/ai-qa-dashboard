@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 
+type Tone = "default" | "success" | "warning" | "danger";
+
 interface MetricCardProps {
   label: string;
   value: string | number;
@@ -8,6 +10,7 @@ interface MetricCardProps {
   trendDirection?: "up" | "down" | "neutral";
   icon?: ReactNode;
   onClick?: () => void;
+  tone?: Tone;
 }
 
 function getTrendColor(direction?: "up" | "down" | "neutral") {
@@ -28,6 +31,36 @@ function getTrendSymbol(direction?: "up" | "down" | "neutral") {
   return "•";
 }
 
+function getToneStyles(tone: Tone) {
+  switch (tone) {
+    case "success":
+      return {
+        background: "#f0fdf4",
+        border: "1px solid #86efac",
+        valueColor: "#166534",
+      };
+    case "warning":
+      return {
+        background: "#fffbeb",
+        border: "1px solid #fcd34d",
+        valueColor: "#92400e",
+      };
+    case "danger":
+      return {
+        background: "#fef2f2",
+        border: "1px solid #fca5a5",
+        valueColor: "#b91c1c",
+      };
+    case "default":
+    default:
+      return {
+        background: "#ffffff",
+        border: "1px solid #e2e8f0",
+        valueColor: "#0f172a",
+      };
+  }
+}
+
 export function MetricCard({
   label,
   value,
@@ -36,14 +69,16 @@ export function MetricCard({
   trendDirection = "neutral",
   icon,
   onClick,
+  tone = "default",
 }: MetricCardProps) {
   const clickable = typeof onClick === "function";
+  const toneStyles = getToneStyles(tone);
 
   const content = (
     <div
       style={{
-        background: "#ffffff",
-        border: "1px solid #e2e8f0",
+        background: toneStyles.background,
+        border: toneStyles.border,
         borderRadius: 14,
         padding: 16,
         minHeight: 116,
@@ -90,7 +125,7 @@ export function MetricCard({
         style={{
           fontSize: 18,
           fontWeight: 700,
-          color: "#0f172a",
+          color: toneStyles.valueColor,
           lineHeight: 1.15,
           letterSpacing: "-0.2px",
           marginTop: 10,
